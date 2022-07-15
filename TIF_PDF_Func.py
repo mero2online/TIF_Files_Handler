@@ -61,8 +61,8 @@ def createPDF_TIF(browseFolderName, startDepth, filesList, haveHeader):
                 'to': toDepth,
                 'addVal': addVal
             }
-            if fromDepth < ((len(filesList)/2)*20)+startLogDepth:
-                depthPerPage.append(data)
+            # if fromDepth < ((len(filesList)/2)*20)+startLogDepth:
+            depthPerPage.append(data)
             cumDept += addVal
 
     imgsDepths = []
