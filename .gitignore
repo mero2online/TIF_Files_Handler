@@ -6,4 +6,5 @@ dist
 *.spec
 TestFiles
 Resized_TIF
+Labeled_TIF
 *.pdf

@@ -35,24 +35,28 @@ def browseFolder():
     browseFolderName = filedialog.askdirectory(title='Select TIF folder...',)
     clearSaveStatusVar()
     if browsWindowName == 'showAddLabel':
-        if browseFolderName:
-            addLabelBtn.config(state=NORMAL)
+        addLabelBtn.config(state=DISABLED)
     elif browsWindowName == 'showResizeImage':
-        if browseFolderName:
-            resizeImageBtn.config(state=NORMAL)
+        resizeImageBtn.config(state=DISABLED)
     elif browsWindowName == 'showCreatePDF':
         browsePDFBtn.config(state=DISABLED)
-        if browseFolderName:
-            global filesList
-            filesList = listAllFiles(browseFolderName)
-            if len(filesList) == 0:
-                messagebox.showerror(
-                    'Folder error', 'This folder not contains any TIF files,\nPlease select another folder')
-            else:
-                saveStatusVar.set(
-                    f'Folder contains: {len(filesList)} TIF files')
+        startDepth.set('')
+    
+    if browseFolderName:
+        global filesList
+        filesList = listAllFiles(browseFolderName)
+        if len(filesList) == 0:
+            messagebox.showerror(
+                'Folder error', 'This folder not contains any TIF files,\nPlease select another folder')
+        else:
+            saveStatusVar.set(
+                f'Folder contains: {len(filesList)} TIF files')
+            if browsWindowName == 'showAddLabel':
+                addLabelBtn.config(state=NORMAL)
+            elif browsWindowName == 'showResizeImage':
+                resizeImageBtn.config(state=NORMAL)
+            elif browsWindowName == 'showCreatePDF':
                 browsePDFBtn.config(state=NORMAL)
-            startDepth.set('')
 
 
 def browsePDF():
@@ -115,15 +119,37 @@ def createFiles():
     saveConfig()
 
 
-def addLabelsForImages():
+def addLabelsForImagesThread():
     addLabelsForTIF(browseFolderName)
+    stopProgressBar()
+    browseFolderBtn.config(state=NORMAL)
+    folderName.set(f'All Images labeled successfully in folder [Labeled_TIF]')
+
+
+def addLabelsForImages():
+    browseFolderBtn.config(state=DISABLED)
+    addLabelBtn.config(state=DISABLED)
+    thread = threading.Thread(target=addLabelsForImagesThread)
+    thread.start()
+    startProgressBar()
+
+
+def resizeAllImagesThread():
+    resizeAllTIF(browseFolderName)
+    stopProgressBar()
+    browseFolderBtn.config(state=NORMAL)
+    folderName.set(f'All Images resized successfully in folder [Resized_TIF]')
 
 
 def resizeAllImages():
-    resizeAllTIF(browseFolderName)
+    browseFolderBtn.config(state=DISABLED)
+    resizeImageBtn.config(state=DISABLED)
+    thread = threading.Thread(target=resizeAllImagesThread)
+    thread.start()
+    startProgressBar()
 
 
-def threadRun():
+def createPDFPhotoThread():
     createPDF_TIF(PDF_Filename, browseFolderName,
                   startDepth.get(), filesList, haveHeader)
     stopProgressBar()
@@ -135,7 +161,7 @@ def createPDFPhoto():
     browseFolderBtn.config(state=DISABLED)
     browsePDFBtn.config(state=DISABLED)
     CreatePDFBtn.config(state=DISABLED)
-    thread = threading.Thread(target=threadRun)
+    thread = threading.Thread(target=createPDFPhotoThread)
     thread.start()
     startProgressBar()
 
