@@ -1,12 +1,16 @@
 from tkinter import *
 from tkinter import messagebox
 from tkinter import filedialog
+import tkinter.ttk as ttk
+from tkinter.ttk import Progressbar
+import threading
 import os
 
 from HelperFunc import getTimeNowText, readLocalFile, resource_path, writeLocalFile
 from TIF_Func import addLabelsForTIF, listAllFiles, resizeAllTIF
 from TIF_PDF_Func import checkInputPDF, createPDF_TIF
 from settings import appVersionNo
+from Progressbar import *
 
 try:
     import pyi_splash  # type: ignore
@@ -28,13 +32,17 @@ def getCSVData():
 
 def browseFolder():
     global browseFolderName
-    browseFolderName = filedialog.askdirectory()
-    if browseFolderName:
-        if browsWindowName == 'showAddLabel':
+    browseFolderName = filedialog.askdirectory(title='Select TIF folder...',)
+    clearSaveStatusVar()
+    if browsWindowName == 'showAddLabel':
+        if browseFolderName:
             addLabelBtn.config(state=NORMAL)
-        elif browsWindowName == 'showResizeImage':
+    elif browsWindowName == 'showResizeImage':
+        if browseFolderName:
             resizeImageBtn.config(state=NORMAL)
-        elif browsWindowName == 'showCreatePDF':
+    elif browsWindowName == 'showCreatePDF':
+        browsePDFBtn.config(state=DISABLED)
+        if browseFolderName:
             global filesList
             filesList = listAllFiles(browseFolderName)
             if len(filesList) == 0:
@@ -44,25 +52,30 @@ def browseFolder():
                 saveStatusVar.set(
                     f'Folder contains: {len(filesList)} TIF files')
                 browsePDFBtn.config(state=NORMAL)
+            startDepth.set('')
 
 
 def browsePDF():
     global PDF_Filename
     PDF_Filename = filedialog.askopenfilename(
-        title='Select a file...',
+        title='Select PDF file...',
         filetypes=(('PDF files', '*.pdf'),
                    ('All files', '*.*')))
     startDepth.set('')
+    folderName.set('')
+    CreatePDFBtn.config(state=DISABLED)
     if PDF_Filename:
         global haveHeader
         haveHeader, startLogDepth = checkInputPDF(PDF_Filename)
-        if haveHeader:
-            if startLogDepth:
-                startDepth.set(startLogDepth)
-                CreatePDFBtn.config(state=NORMAL)
-        startDepthEntry.config(state=NORMAL)
-        CreatePDFBtn.config(state=NORMAL)
-        folderName.set(PDF_Filename)
+        if haveHeader and startLogDepth != '':
+            startDepth.set(startLogDepth)
+            folderName.set(PDF_Filename)
+            CreatePDFBtn.config(state=NORMAL)
+        else:
+            messagebox.showerror(
+                'File error',
+                '''The Mud Log dont have header please provide one with header or the selected file not valid.
+Please browse valid Mud Log PDF.''')
 
 
 def saveConfig():
@@ -110,8 +123,21 @@ def resizeAllImages():
     resizeAllTIF(browseFolderName)
 
 
+def threadRun():
+    createPDF_TIF(PDF_Filename, browseFolderName,
+                  startDepth.get(), filesList, haveHeader)
+    stopProgressBar()
+    browseFolderBtn.config(state=NORMAL)
+    browsePDFBtn.config(state=NORMAL)
+
+
 def createPDFPhoto():
-    createPDF_TIF(browseFolderName, startDepth.get(), filesList, haveHeader)
+    browseFolderBtn.config(state=DISABLED)
+    browsePDFBtn.config(state=DISABLED)
+    CreatePDFBtn.config(state=DISABLED)
+    thread = threading.Thread(target=threadRun)
+    thread.start()
+    startProgressBar()
 
 
 def clearSaveStatusVar(*e):
@@ -204,7 +230,7 @@ def showCreateFiles():
     createFilesBtn = Button(root, text="Create Files", background='#15133C', foreground='#EC994B', borderwidth=2, relief="groove", padx=5, pady=5,
                             command=createFiles)
     createFilesBtn.place(x=197, y=175, width=120, height=35)
-    resizeWindow(515, 290)
+    resizeWindow(515, 315)
     destroyAddLabel()
     destroyResizeImage()
     destroyCreatePDF()
@@ -216,7 +242,7 @@ def showAddLabel():
     showResizeImageBtn.config(state='normal')
     showCreatePDFBtn.config(state='normal')
 
-    resizeWindow(515, 205)
+    resizeWindow(515, 230)
     destroyCreateFiles()
     destroyResizeImage()
     destroyCreatePDF()
@@ -236,7 +262,7 @@ def showResizeImage():
     showAddLabelBtn.config(state='normal')
     showCreatePDFBtn.config(state='normal')
 
-    resizeWindow(515, 205)
+    resizeWindow(515, 230)
     destroyCreateFiles()
     destroyAddLabel()
     destroyCreatePDF()
@@ -256,7 +282,7 @@ def showCreatePDF():
     showCreateFilesBtn.config(state='normal')
     showAddLabelBtn.config(state='normal')
 
-    resizeWindow(515, 290)
+    resizeWindow(515, 315)
     destroyCreateFiles()
     destroyAddLabel()
     destroyResizeImage()
@@ -301,8 +327,9 @@ def resizeWindow(rootWidth, rootHeight):
 
 def placeMadeByAndVersionNo(rootWidth, rootHeight):
     if rootHeight > 80:
-        saveStatus.place(x=65, y=rootHeight-70, width=390, height=20)
-        currentFilePath.place(x=65, y=rootHeight-45, width=390, height=20)
+        saveStatus.place(x=65, y=rootHeight-95, width=390, height=20)
+        currentFilePath.place(x=65, y=rootHeight-70, width=390, height=20)
+        pb1.place(x=65, y=rootHeight-45, width=390, height=20)
     madeWithLoveBy.place(x=0, y=rootHeight-20, width=190, height=20)
     versionNo.place(x=rootWidth-60, y=rootHeight-20, width=60, height=20)
 
@@ -337,6 +364,18 @@ folderName = StringVar()
 currentFilePath = Label(
     root, textvariable=folderName, background='#15133C', foreground='#EC994B')
 
+frame = Frame(root)
+frame.grid()
+s = ttk.Style()
+s.theme_use('clam')
+s.configure("my.Horizontal.TProgressbar",
+            foreground='#EC994B', background='#15133C')
+
+startProgBar = BooleanVar(root, True)
+pb1 = Progressbar(root, orient=HORIZONTAL, length=101,
+                  mode="determinate", takefocus=True, maximum=101, style="my.Horizontal.TProgressbar")
+initProgBar(root, pb1, startProgBar)
+
 madeWithLoveBy = Label(
     root, text='Made with ❤ by Mohamed Omar', background='#15133C', foreground='#EC994B',
     font=('monospace', 9, 'bold'))
@@ -352,5 +391,13 @@ root.configure(bg='#000')
 root.resizable(False, False)
 # Setting icon of master window
 root.iconbitmap(resource_path('tif.ico'))
+
+
+def onClosing():
+    pbOnClosing()
+    root.destroy()
+
+
+root.protocol('WM_DELETE_WINDOW', onClosing)
 # Start program
 root.mainloop()
