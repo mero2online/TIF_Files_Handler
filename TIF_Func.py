@@ -50,11 +50,11 @@ def resizeAllTIF(browseFolderName):
         os.mkdir(dest_dir)
 
     tifList = listAllFiles(browseFolderName)
-    h = len(tifList)*600
-    img = Image.new("RGB", (800, h), "white")
+    # h = len(tifList)*600
+    # img = Image.new("RGB", (800, h), "white")
     for idx, file_name in enumerate(tifList):
         my_image = Image.open(f'{browseFolderName}\\{file_name}')
         my_image.thumbnail((800, 600), Image.ANTIALIAS)
         my_image.save(f'{dest_dir}\\{file_name}')
-        img.paste(my_image, (0, idx*600))
-    img.save(f'{dest_dir}\\0img.tif')
+        # img.paste(my_image, (0, idx*600))
+    # img.save(f'{dest_dir}\\0img.tif')
